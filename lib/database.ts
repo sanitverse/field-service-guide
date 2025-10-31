@@ -85,35 +85,117 @@ export const taskOperations = {
     return data || []
   },
 
-  async createTask(task: Tables['service_tasks']['Insert']): Promise<ServiceTask | null> {
+  async createTask(task: Tables['service_tasks']['Insert'], notifyAssignee = true): Promise<ServiceTask | null> {
     const { data, error } = await supabase
       .from('service_tasks')
       .insert(task)
-      .select()
+      .select(`
+        *,
+        assignee:assigned_to(id, full_name, email),
+        creator:created_by(id, full_name, email)
+      `)
       .single()
     
     if (error) {
       console.error('Error creating task:', error)
       return null
     }
+
+    // Create notification for assignee if task is assigned
+    if (data.assigned_to && notifyAssignee) {
+      await this.createTaskNotification(data, 'assigned')
+    }
     
     return data
   },
 
-  async updateTask(taskId: string, updates: Tables['service_tasks']['Update']): Promise<ServiceTask | null> {
+  async updateTask(taskId: string, updates: Tables['service_tasks']['Update'], notifyChanges = true): Promise<ServiceTask | null> {
+    // Get the current task to compare changes
+    const { data: currentTask } = await supabase
+      .from('service_tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single()
+
     const { data, error } = await supabase
       .from('service_tasks')
       .update(updates)
       .eq('id', taskId)
-      .select()
+      .select(`
+        *,
+        assignee:assigned_to(id, full_name, email),
+        creator:created_by(id, full_name, email)
+      `)
       .single()
     
     if (error) {
       console.error('Error updating task:', error)
       return null
     }
+
+    // Create notifications for relevant changes
+    if (notifyChanges && currentTask) {
+      // Assignment change notification
+      if (updates.assigned_to && updates.assigned_to !== currentTask.assigned_to) {
+        await this.createTaskNotification(data, 'assigned')
+      }
+      
+      // Status change notification
+      if (updates.status && updates.status !== currentTask.status) {
+        await this.createTaskNotification(data, 'status_changed', {
+          oldStatus: currentTask.status,
+          newStatus: updates.status
+        })
+      }
+    }
     
     return data
+  },
+
+  async createTaskNotification(task: any, type: 'assigned' | 'status_changed' | 'comment_added', metadata?: any) {
+    try {
+      let title = ''
+      let message = ''
+      let targetUserId = ''
+
+      switch (type) {
+        case 'assigned':
+          if (task.assignee) {
+            title = 'New Task Assignment'
+            message = `You have been assigned to task: ${task.title}`
+            targetUserId = task.assignee.id
+          }
+          break
+        
+        case 'status_changed':
+          title = 'Task Status Updated'
+          message = `Task "${task.title}" status changed from ${metadata?.oldStatus} to ${metadata?.newStatus}`
+          // Notify both assignee and creator
+          if (task.assignee) {
+            targetUserId = task.assignee.id
+          } else if (task.creator) {
+            targetUserId = task.creator.id
+          }
+          break
+        
+        case 'comment_added':
+          title = 'New Task Comment'
+          message = `New comment added to task: ${task.title}`
+          // Notify assignee if not the commenter
+          if (task.assignee && task.assignee.id !== metadata?.commenterId) {
+            targetUserId = task.assignee.id
+          }
+          break
+      }
+
+      if (targetUserId && title && message) {
+        // In a real implementation, you would save this to a notifications table
+        // For now, we'll use browser notifications or in-app notifications
+        console.log('Notification created:', { title, message, targetUserId, taskId: task.id })
+      }
+    } catch (error) {
+      console.error('Error creating task notification:', error)
+    }
   },
 
   async getTaskStatistics(userId?: string) {
@@ -234,6 +316,97 @@ export const analyticsOperations = {
     }
     
     return data?.[0] || null
+  }
+}
+
+// Comment operations
+export const commentOperations = {
+  async getTaskComments(taskId: string) {
+    const { data, error } = await supabase
+      .from('task_comments')
+      .select(`
+        *,
+        author:author_id(id, full_name, email)
+      `)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true })
+    
+    if (error) {
+      console.error('Error fetching task comments:', error)
+      return []
+    }
+    
+    return data || []
+  },
+
+  async createComment(comment: Tables['task_comments']['Insert']) {
+    const { data, error } = await supabase
+      .from('task_comments')
+      .insert(comment)
+      .select(`
+        *,
+        author:author_id(id, full_name, email)
+      `)
+      .single()
+    
+    if (error) {
+      console.error('Error creating comment:', error)
+      return null
+    }
+
+    // Get task details for notification
+    if (data) {
+      const { data: task } = await supabase
+        .from('service_tasks')
+        .select(`
+          *,
+          assignee:assigned_to(id, full_name, email),
+          creator:created_by(id, full_name, email)
+        `)
+        .eq('id', comment.task_id)
+        .single()
+
+      if (task) {
+        await taskOperations.createTaskNotification(task, 'comment_added', {
+          commenterId: comment.author_id
+        })
+      }
+    }
+    
+    return data
+  },
+
+  async updateComment(commentId: string, updates: Tables['task_comments']['Update']) {
+    const { data, error } = await supabase
+      .from('task_comments')
+      .update(updates)
+      .eq('id', commentId)
+      .select(`
+        *,
+        author:author_id(id, full_name, email)
+      `)
+      .single()
+    
+    if (error) {
+      console.error('Error updating comment:', error)
+      return null
+    }
+    
+    return data
+  },
+
+  async deleteComment(commentId: string) {
+    const { error } = await supabase
+      .from('task_comments')
+      .delete()
+      .eq('id', commentId)
+    
+    if (error) {
+      console.error('Error deleting comment:', error)
+      return false
+    }
+    
+    return true
   }
 }
 

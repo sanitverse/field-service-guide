@@ -1,7 +1,33 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import Link from 'next/link'
 
 export default function Home() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard')
+    }
+  }, [user, loading, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (user) {
+    return null // Will redirect to dashboard
+  }
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-16">
@@ -101,9 +127,16 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="text-center mt-12">
-          <Button size="lg">
-            Get Started
+        <div className="text-center mt-12 space-x-4">
+          <Button size="lg" asChild>
+            <Link href="/auth">
+              Get Started
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link href="/auth">
+              Sign In
+            </Link>
           </Button>
         </div>
       </main>

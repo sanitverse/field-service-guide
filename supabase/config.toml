@@ -22,7 +22,7 @@ port = 54322
 shadow_port = 54320
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version_num;` on the remote database to check.
-major_version = 15
+major_version = 17
 
 [db.pooler]
 enabled = false
@@ -293,15 +293,11 @@ backend = "postgres"
 # Experimental features may be deprecated any time
 [experimental]
 # Configures Postgres storage-engine with S3 as the data access layer
-[experimental.s3]
-enabled = false
-# AWS S3 region
-region = "us-east-1"
-# AWS S3 bucket
-bucket = ""
-# AWS S3 role ARN to assume
-role_arn = ""
-# AWS S3 Access Key ID
-access_key_id = ""
-# AWS S3 Secret Access Key
-secret_access_key = ""
+# Note: S3 configuration removed due to compatibility issues with current CLI version
+# [experimental.s3]
+# enabled = false
+# region = "us-east-1"
+# bucket = ""
+# role_arn = ""
+# access_key_id = ""
+# secret_access_key = ""
