@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup:supabase": "node scripts/setup-supabase.js",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase db push",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
