@@ -28,16 +28,16 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
   const loadUsers = async () => {
     setLoading(true)
     const allUsers = await profileOperations.getAllProfiles()
     setUsers(allUsers)
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const handleStatusToggle = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'

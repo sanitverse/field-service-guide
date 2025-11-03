@@ -31,19 +31,36 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    switch (type) {
+      case 'success':
+        toast.success(message)
+        break
+      case 'error':
+        toast.error(message)
+        break
+      case 'warning':
+        toast.warning(message)
+        break
+      default:
+        toast.info(message)
+        break
+    }
+  }, [])
+
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: Notification = {
-      ...notification,
-      id: crypto.randomUUID(),
+      id: Date.now().toString(),
       timestamp: new Date(),
       read: false,
+      ...notification
     }
     
     setNotifications(prev => [newNotification, ...prev])
     
     // Show toast notification
     showToast(notification.message, notification.type === 'error' ? 'error' : 'info')
-  }, [])
+  }, [showToast])
 
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>
@@ -69,23 +86,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const clearAllNotifications = useCallback(() => {
     setNotifications([])
-  }, [])
-
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    switch (type) {
-      case 'success':
-        toast.success(message)
-        break
-      case 'error':
-        toast.error(message)
-        break
-      case 'warning':
-        toast.warning(message)
-        break
-      default:
-        toast.info(message)
-        break
-    }
   }, [])
 
   const unreadCount = notifications.filter(n => !n.read).length

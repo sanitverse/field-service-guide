@@ -93,26 +93,43 @@
   - Test task assignment and notification functionality
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 5. Implement file upload and storage system
-- [ ] 5.1 Create file upload components and validation
+- [x] 5. Implement file upload and storage system
+
+
+
+
+
+- [x] 5.1 Create file upload components and validation
+
+
   - Build drag-and-drop file upload using Shadcn Card and Progress components
   - Implement file type validation and size limits
   - Create file preview and thumbnail generation
   - _Requirements: 3.1, 3.2, 3.4_
 
-- [ ] 5.2 Build file browser and management interface
+- [x] 5.2 Build file browser and management interface
+
+
   - Create file listing with Shadcn Table and Pagination components
   - Implement file search and filtering capabilities
   - Add file association with tasks and bulk operations
   - _Requirements: 3.3, 3.5_
 
-- [ ] 5.3 Set up file processing pipeline for RAG
+- [x] 5.3 Set up file processing pipeline for RAG
+
+
   - Create API routes for file processing and text extraction
   - Implement document chunking and embedding generation
   - Set up background job processing for large files
   - _Requirements: 4.1, 4.2_
 
-- [ ]* 5.4 Write file management tests
+- [x] 5.4 Write file management tests
+
+
+
+
+
+
   - Create unit tests for file upload and validation
   - Test file processing and RAG preparation
   - _Requirements: 3.1, 3.2, 3.4, 4.1_

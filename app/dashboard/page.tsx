@@ -71,7 +71,7 @@ export default function DashboardPage() {
           {getWelcomeMessage()}, {profile?.full_name || 'User'}!
         </h1>
         <p className="text-muted-foreground">
-          Welcome to your Field Service Guide dashboard. Here's what you can do today.
+          Welcome to your Field Service Guide dashboard. Here&apos;s what you can do today.
         </p>
       </div>
 
@@ -173,14 +173,14 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-4">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Task "HVAC Installation" assigned to you</p>
+                  <p className="text-sm font-medium">Task &quot;HVAC Installation&quot; assigned to you</p>
                   <p className="text-xs text-muted-foreground">2 hours ago</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">File "maintenance-manual.pdf" uploaded</p>
+                  <p className="text-sm font-medium">File &quot;maintenance-manual.pdf&quot; uploaded</p>
                   <p className="text-xs text-muted-foreground">4 hours ago</p>
                 </div>
               </div>
