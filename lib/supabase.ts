@@ -203,6 +203,70 @@ export type Database = {
           created_at?: string
         }
       }
+      search_analytics: {
+        Row: {
+          id: string
+          user_id: string
+          query: string
+          results_count: number
+          similarity_threshold: number
+          execution_time_ms: number
+          clicked_result_ids: string[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          query: string
+          results_count?: number
+          similarity_threshold?: number
+          execution_time_ms?: number
+          clicked_result_ids?: string[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          query?: string
+          results_count?: number
+          similarity_threshold?: number
+          execution_time_ms?: number
+          clicked_result_ids?: string[]
+          created_at?: string
+        }
+      }
+      saved_queries: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          query: string
+          filters: Record<string, any>
+          created_at: string
+          last_used_at: string
+          use_count: number
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          query: string
+          filters?: Record<string, any>
+          created_at?: string
+          last_used_at?: string
+          use_count?: number
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          query?: string
+          filters?: Record<string, any>
+          created_at?: string
+          last_used_at?: string
+          use_count?: number
+        }
+      }
     }
     Functions: {
       search_documents: {

@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS background_jobs (
 CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_background_jobs_type ON background_jobs(type);
 CREATE INDEX IF NOT EXISTS idx_background_jobs_created_at ON background_jobs(created_at);
-CREATE INDEX IF NOT EXISTS idx_background_jobs_payload_file_id ON background_jobs USING GIN ((payload->>'fileId'));
+-- Use JSONB GIN index instead of text extraction
+CREATE INDEX IF NOT EXISTS idx_background_jobs_payload ON background_jobs USING GIN (payload);
 
 -- RLS policies for background jobs
 ALTER TABLE background_jobs ENABLE ROW LEVEL SECURITY;

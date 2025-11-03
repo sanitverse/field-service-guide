@@ -138,14 +138,12 @@ export function chunkText(
 }
 
 /**
- * Generate embeddings for text chunks (placeholder for OpenAI integration)
+ * Generate embeddings for text chunks using OpenAI
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  // This is a placeholder implementation
-  // In a real implementation, you would call OpenAI's embedding API
-  
-  // For now, return mock embeddings (1536 dimensions for OpenAI text-embedding-ada-002)
-  return texts.map(() => Array(1536).fill(0).map(() => Math.random() - 0.5))
+  // Import the OpenAI function
+  const { generateEmbeddings: openaiGenerateEmbeddings } = await import('./openai')
+  return await openaiGenerateEmbeddings(texts)
 }
 
 /**

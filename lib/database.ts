@@ -13,18 +13,28 @@ type FileRecord = Tables['files']['Row']
 // Profile operations
 export const profileOperations = {
   async getProfile(userId: string): Promise<Profile | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    
-    if (error) {
-      console.error('Error fetching profile:', error)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      
+      if (error) {
+        // If profile doesn't exist, this is expected for new users
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found for user:', userId)
+          return null
+        }
+        console.error('Error fetching profile:', error)
+        return null
+      }
+      
+      return data
+    } catch (error) {
+      console.error('Unexpected error fetching profile:', error)
       return null
     }
-    
-    return data
   },
 
   async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
@@ -41,6 +51,44 @@ export const profileOperations = {
     }
     
     return data
+  },
+
+  async createProfile(userId: string, email: string, fullName?: string, role: string = 'technician'): Promise<Profile | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email,
+          full_name: fullName || email.split('@')[0],
+          role: role as 'admin' | 'supervisor' | 'technician' | 'customer'
+        })
+        .select()
+        .single()
+      
+      if (error) {
+        console.error('Error creating profile:', error)
+        return null
+      }
+      
+      return data
+    } catch (error) {
+      console.error('Unexpected error creating profile:', error)
+      return null
+    }
+  },
+
+  async getOrCreateProfile(userId: string, email: string, fullName?: string, role?: string): Promise<Profile | null> {
+    // First try to get existing profile
+    let profile = await this.getProfile(userId)
+    
+    // If profile doesn't exist, create it
+    if (!profile) {
+      console.log('Creating new profile for user:', userId)
+      profile = await this.createProfile(userId, email, fullName, role)
+    }
+    
+    return profile
   },
 
   async getAllProfiles(): Promise<Profile[]> {
@@ -289,6 +337,56 @@ export const searchOperations = {
     }
     
     return data || []
+  },
+
+  async getDocumentChunks(fileId: string) {
+    const { data, error } = await supabase
+      .from('document_chunks')
+      .select('*')
+      .eq('file_id', fileId)
+      .order('chunk_index')
+    
+    if (error) {
+      console.error('Error fetching document chunks:', error)
+      return []
+    }
+    
+    return data || []
+  },
+
+  async createDocumentChunk(chunk: {
+    file_id: string
+    content: string
+    embedding: number[]
+    chunk_index: number
+    metadata?: Record<string, any>
+  }) {
+    const { data, error } = await supabase
+      .from('document_chunks')
+      .insert(chunk)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error creating document chunk:', error)
+      return null
+    }
+    
+    return data
+  },
+
+  async deleteDocumentChunks(fileId: string) {
+    const { error } = await supabase
+      .from('document_chunks')
+      .delete()
+      .eq('file_id', fileId)
+    
+    if (error) {
+      console.error('Error deleting document chunks:', error)
+      return false
+    }
+    
+    return true
   }
 }
 

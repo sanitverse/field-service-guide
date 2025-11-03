@@ -26,15 +26,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        const userProfile = await profileOperations.getProfile(session.user.id)
-        setProfile(userProfile)
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          console.error('Error getting session:', error)
+          setLoading(false)
+          return
+        }
+
+        setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          const userProfile = await profileOperations.getOrCreateProfile(
+            session.user.id,
+            session.user.email || '',
+            session.user.user_metadata?.full_name,
+            session.user.user_metadata?.role
+          )
+          setProfile(userProfile)
+        }
+        
+        setLoading(false)
+      } catch (error) {
+        console.error('Unexpected error in getInitialSession:', error)
+        setLoading(false)
       }
-      
-      setLoading(false)
     }
 
     getInitialSession()
@@ -42,16 +59,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const userProfile = await profileOperations.getProfile(session.user.id)
-          setProfile(userProfile)
-        } else {
-          setProfile(null)
+        try {
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            const userProfile = await profileOperations.getOrCreateProfile(
+              session.user.id,
+              session.user.email || '',
+              session.user.user_metadata?.full_name,
+              session.user.user_metadata?.role
+            )
+            setProfile(userProfile)
+          } else {
+            setProfile(null)
+          }
+          
+          setLoading(false)
+        } catch (error) {
+          console.error('Error in auth state change:', error)
+          setLoading(false)
         }
-        
-        setLoading(false)
       }
     )
 

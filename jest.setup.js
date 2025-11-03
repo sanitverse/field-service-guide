@@ -25,6 +25,11 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
+// Mock environment variables
+process.env.OPENAI_API_KEY = 'test-api-key'
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+
 // Mock Supabase
 jest.mock('./lib/supabase', () => ({
   supabase: {
@@ -37,7 +42,17 @@ jest.mock('./lib/supabase', () => ({
         data: { subscription: { unsubscribe: jest.fn() } }
       })),
     },
+    from: jest.fn(),
+    rpc: jest.fn(),
   },
+}))
+
+// Mock OpenAI
+jest.mock('./lib/openai', () => ({
+  generateEmbedding: jest.fn(),
+  generateEmbeddings: jest.fn(),
+  chunkText: jest.fn(),
+  extractTextFromFile: jest.fn(),
 }))
 
 // Mock database operations
