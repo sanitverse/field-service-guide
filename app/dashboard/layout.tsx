@@ -63,7 +63,7 @@ const getNavigation = (userRole: string) => {
     },
     { 
       name: 'AI Assistant', 
-      href: '/dashboard/ai', 
+      href: '/dashboard/ai-assistant', 
       icon: MessageSquare,
       description: 'AI-powered help'
     },

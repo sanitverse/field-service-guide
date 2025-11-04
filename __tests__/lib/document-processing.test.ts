@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
+import { describe, it, expect } from '@jest/globals'
 
 describe('Document Processing Core Functions', () => {
   // Test the core chunking logic without external dependencies

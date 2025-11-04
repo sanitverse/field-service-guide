@@ -38,13 +38,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          const userProfile = await profileOperations.getOrCreateProfile(
-            session.user.id,
-            session.user.email || '',
-            session.user.user_metadata?.full_name,
-            session.user.user_metadata?.role
-          )
-          setProfile(userProfile)
+          try {
+            const userProfile = await profileOperations.getOrCreateProfile(
+              session.user.id,
+              session.user.email || '',
+              session.user.user_metadata?.full_name,
+              session.user.user_metadata?.role
+            )
+            setProfile(userProfile)
+          } catch (profileError) {
+            console.error('Error handling user profile:', profileError)
+            // Create a fallback profile so the app can still work
+            const fallbackProfile = profileOperations.createMockProfile(
+              session.user.id,
+              session.user.email || '',
+              session.user.user_metadata?.full_name,
+              session.user.user_metadata?.role || 'technician'
+            )
+            setProfile(fallbackProfile)
+          }
         }
         
         setLoading(false)

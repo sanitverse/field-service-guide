@@ -5,6 +5,32 @@ const { TextEncoder, TextDecoder } = require('util')
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder
 
+// Polyfill for Request/Response (needed for Next.js API routes)
+global.Request = class Request {
+  constructor(url, options = {}) {
+    this.url = url
+    this.method = options.method || 'GET'
+    this.headers = new Map(Object.entries(options.headers || {}))
+    this.body = options.body
+  }
+  
+  async json() {
+    return JSON.parse(this.body)
+  }
+}
+
+global.Response = class Response {
+  constructor(body, options = {}) {
+    this.body = body
+    this.status = options.status || 200
+    this.headers = new Map(Object.entries(options.headers || {}))
+  }
+  
+  async json() {
+    return JSON.parse(this.body)
+  }
+}
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {
@@ -60,5 +86,23 @@ jest.mock('./lib/database', () => ({
   profileOperations: {
     getProfile: jest.fn(),
     updateProfile: jest.fn(),
+    getAllProfiles: jest.fn(),
+    createMockProfile: jest.fn(),
+  },
+  taskOperations: {
+    getTasks: jest.fn(),
+    createTask: jest.fn(),
+    updateTask: jest.fn(),
+    deleteTask: jest.fn(),
+    createTaskNotification: jest.fn(),
+  },
+  fileOperations: {
+    getFiles: jest.fn(),
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
+  },
+  aiOperations: {
+    saveInteraction: jest.fn(),
+    getUserInteractions: jest.fn(),
   },
 }))

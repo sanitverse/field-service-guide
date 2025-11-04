@@ -27,6 +27,7 @@ export const profileOperations = {
           return null
         }
         console.error('Error fetching profile:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
         return null
       }
       
@@ -68,6 +69,7 @@ export const profileOperations = {
       
       if (error) {
         console.error('Error creating profile:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
         return null
       }
       
@@ -75,6 +77,18 @@ export const profileOperations = {
     } catch (error) {
       console.error('Unexpected error creating profile:', error)
       return null
+    }
+  },
+
+  createMockProfile(userId: string, email: string, fullName?: string, role: string = 'technician'): Profile {
+    return {
+      id: userId,
+      email: email,
+      full_name: fullName || email.split('@')[0],
+      role: role as 'admin' | 'supervisor' | 'technician' | 'customer',
+      status: 'active' as 'active' | 'inactive',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   },
 
@@ -92,45 +106,129 @@ export const profileOperations = {
   },
 
   async getAllProfiles(): Promise<Profile[]> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('status', 'active')
-      .order('full_name')
-    
-    if (error) {
-      console.error('Error fetching profiles:', error)
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('status', 'active')
+        .order('full_name')
+      
+      if (error) {
+        console.error('Error fetching profiles:', error)
+        return []
+      }
+      
+      return data || []
+    } catch (error) {
+      console.error('Unexpected error fetching profiles:', error)
       return []
     }
-    
-    return data || []
+  },
+
+  getMockProfiles(): Profile[] {
+    return [
+      {
+        id: 'mock-admin',
+        email: 'admin@company.com',
+        full_name: 'System Administrator',
+        role: 'admin',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-supervisor',
+        email: 'supervisor@company.com',
+        full_name: 'Field Supervisor',
+        role: 'supervisor',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-tech1',
+        email: 'tech1@company.com',
+        full_name: 'Senior Technician',
+        role: 'technician',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-tech2',
+        email: 'tech2@company.com',
+        full_name: 'Junior Technician',
+        role: 'technician',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
   }
 }
 
 // Task operations
 export const taskOperations = {
   async getTasks(userId?: string): Promise<ServiceTask[]> {
-    let query = supabase
-      .from('service_tasks')
-      .select(`
-        *,
-        assignee:assigned_to(id, full_name, email),
-        creator:created_by(id, full_name, email)
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (userId) {
-      query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
-    }
-    
-    const { data, error } = await query
-    
-    if (error) {
-      console.error('Error fetching tasks:', error)
+    try {
+      let query = supabase
+        .from('service_tasks')
+        .select(`
+          *,
+          assignee:assigned_to(id, full_name, email),
+          creator:created_by(id, full_name, email)
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (userId) {
+        query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+      }
+      
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching tasks:', error)
+        return []
+      }
+      
+      return data || []
+    } catch (error) {
+      console.error('Unexpected error fetching tasks:', error)
       return []
     }
+  },
+
+  getMockTasks(userId?: string): ServiceTask[] {
+    const mockTasks: ServiceTask[] = [
+      {
+        id: 'mock-task-1',
+        title: 'HVAC System Maintenance',
+        description: 'Routine maintenance check for HVAC system in Building A',
+        status: 'pending',
+        priority: 'medium',
+        assigned_to: userId || null,
+        created_by: userId || 'mock-user',
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Building A - Floor 2',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-task-2',
+        title: 'Equipment Inspection',
+        description: 'Monthly safety inspection of all equipment',
+        status: 'in_progress',
+        priority: 'high',
+        assigned_to: userId || null,
+        created_by: userId || 'mock-user',
+        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Main Facility',
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
     
-    return data || []
+    return mockTasks
   },
 
   async createTask(task: Tables['service_tasks']['Insert'], notifyAssignee = true): Promise<ServiceTask | null> {
@@ -262,26 +360,60 @@ export const taskOperations = {
 // File operations
 export const fileOperations = {
   async getFiles(taskId?: string): Promise<FileRecord[]> {
-    let query = supabase
-      .from('files')
-      .select(`
-        *,
-        uploader:uploaded_by(id, full_name, email)
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (taskId) {
-      query = query.eq('related_task_id', taskId)
-    }
-    
-    const { data, error } = await query
-    
-    if (error) {
-      console.error('Error fetching files:', error)
+    try {
+      let query = supabase
+        .from('files')
+        .select(`
+          *,
+          uploader:uploaded_by(id, full_name, email)
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (taskId) {
+        query = query.eq('related_task_id', taskId)
+      }
+      
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching files:', error)
+        return []
+      }
+      
+      return data || []
+    } catch (error) {
+      console.error('Unexpected error fetching files:', error)
       return []
     }
+  },
+
+  getMockFiles(taskId?: string): FileRecord[] {
+    const mockFiles: FileRecord[] = [
+      {
+        id: 'mock-file-1',
+        filename: 'HVAC_Manual_2024.pdf',
+        file_path: '/mock/hvac-manual.pdf',
+        file_size: 2048000,
+        mime_type: 'application/pdf',
+        uploaded_by: 'mock-user',
+        related_task_id: taskId || null,
+        is_processed: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-file-2',
+        filename: 'Safety_Procedures.docx',
+        file_path: '/mock/safety-procedures.docx',
+        file_size: 512000,
+        mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        uploaded_by: 'mock-user',
+        related_task_id: taskId || null,
+        is_processed: true,
+        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      }
+    ]
     
-    return data || []
+    return mockFiles
   },
 
   async createFileRecord(file: Tables['files']['Insert']): Promise<FileRecord | null> {

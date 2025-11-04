@@ -3,10 +3,10 @@ import { deleteSavedQuery } from '@/lib/search-analytics'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { queryId: string } }
+  { params }: { params: Promise<{ queryId: string }> }
 ) {
   try {
-    const { queryId } = params
+    const { queryId } = await params
     const { userId } = await request.json()
 
     if (!queryId || !userId) {

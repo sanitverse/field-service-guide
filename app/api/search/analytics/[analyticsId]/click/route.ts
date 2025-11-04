@@ -3,10 +3,10 @@ import { trackResultClick } from '@/lib/search-analytics'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { analyticsId: string } }
+  { params }: { params: Promise<{ analyticsId: string }> }
 ) {
   try {
-    const { analyticsId } = params
+    const { analyticsId } = await params
     const { resultId } = await request.json()
 
     if (!analyticsId || !resultId) {
