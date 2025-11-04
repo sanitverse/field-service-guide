@@ -266,22 +266,26 @@ export function FileUpload({
         {/* Drop Zone */}
         <div
           className={cn(
-            'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
+            'border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors cursor-pointer touch-manipulation',
+            'min-h-[120px] sm:min-h-[160px] flex flex-col justify-center',
             isDragOver 
               ? 'border-primary bg-primary/5' 
-              : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+              : 'border-muted-foreground/25 hover:border-muted-foreground/50 active:border-primary active:bg-primary/5'
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-medium mb-2">
-            {isDragOver ? 'Drop files here' : 'Choose files or drag them here'}
+          <Upload className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-4 text-muted-foreground" />
+          <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
+            {isDragOver ? 'Drop files here' : 'Tap to choose files'}
           </p>
-          <p className="text-sm text-muted-foreground">
-            Supports images, PDFs, documents up to {Math.round(maxFileSize / 1024 / 1024)}MB
+          <p className="text-xs sm:text-sm text-muted-foreground px-2">
+            Images, PDFs, documents up to {Math.round(maxFileSize / 1024 / 1024)}MB
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 sm:hidden">
+            Or drag and drop files here
           </p>
         </div>
 
@@ -297,11 +301,11 @@ export function FileUpload({
         {/* File List */}
         {hasFiles && (
           <div className="space-y-2">
-            <h4 className="font-medium">Selected Files</h4>
+            <h4 className="font-medium text-sm sm:text-base">Selected Files</h4>
             {files.map((fileWithProgress, index) => (
               <div
                 key={`${fileWithProgress.file.name}-${index}`}
-                className="flex items-center gap-3 p-3 border rounded-lg"
+                className="flex items-center gap-2 sm:gap-3 p-3 border rounded-lg touch-manipulation"
               >
                 <div className="flex-shrink-0">
                   {getFileIcon(fileWithProgress.file.type)}
@@ -316,26 +320,26 @@ export function FileUpload({
                   </p>
                   
                   {fileWithProgress.status === 'uploading' && (
-                    <Progress value={fileWithProgress.progress} className="mt-2" />
+                    <Progress value={fileWithProgress.progress} className="mt-2 h-2" />
                   )}
                   
                   {fileWithProgress.status === 'error' && fileWithProgress.error && (
-                    <Alert className="mt-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-xs">
+                    <Alert className="mt-2 p-2">
+                      <AlertCircle className="h-3 w-3" />
+                      <AlertDescription className="text-xs ml-2">
                         {fileWithProgress.error}
                       </AlertDescription>
                     </Alert>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   {fileWithProgress.status === 'completed' && (
-                    <div className="text-green-600 text-xs">✓ Uploaded</div>
+                    <div className="text-green-600 text-xs font-medium">✓</div>
                   )}
                   
                   {fileWithProgress.status === 'error' && (
-                    <div className="text-red-600 text-xs">✗ Failed</div>
+                    <div className="text-red-600 text-xs font-medium">✗</div>
                   )}
                   
                   {fileWithProgress.status === 'pending' && (
@@ -343,8 +347,10 @@ export function FileUpload({
                       variant="ghost"
                       size="sm"
                       onClick={() => removeFile(index)}
+                      className="h-8 w-8 p-0 touch-manipulation"
                     >
                       <X className="h-4 w-4" />
+                      <span className="sr-only">Remove file</span>
                     </Button>
                   )}
                 </div>
@@ -355,11 +361,11 @@ export function FileUpload({
 
         {/* Upload Button */}
         {hasPendingFiles && (
-          <div className="flex justify-end">
+          <div className="flex justify-stretch sm:justify-end">
             <Button 
               onClick={uploadAllFiles} 
               disabled={isUploading}
-              className="min-w-[120px]"
+              className="w-full sm:w-auto min-w-[120px] touch-manipulation h-12 sm:h-10"
             >
               {isUploading ? 'Uploading...' : `Upload ${files.filter(f => f.status === 'pending').length} file(s)`}
             </Button>

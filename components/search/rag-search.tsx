@@ -151,7 +151,10 @@ export function RAGSearch({
             placeholder={placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-12 sm:h-10 text-base sm:text-sm touch-manipulation"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
           />
           {isLoading && (
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -163,13 +166,13 @@ export function RAGSearch({
         {/* Search History */}
         {searchHistory.length > 0 && !query && (
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 px-3 sm:px-6">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Recent Searches
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 px-3 sm:px-6">
               <div className="flex flex-wrap gap-2">
                 {searchHistory.map((historyQuery, index) => (
                   <Button
@@ -177,7 +180,7 @@ export function RAGSearch({
                     variant="outline"
                     size="sm"
                     onClick={() => setQuery(historyQuery)}
-                    className="text-xs"
+                    className="text-xs h-8 touch-manipulation"
                   >
                     {historyQuery}
                   </Button>
@@ -198,42 +201,42 @@ export function RAGSearch({
         {/* Search Results */}
         {results.length > 0 && (
           <Card>
-            <CardHeader>
+            <CardHeader className="px-3 sm:px-6">
               <CardTitle className="text-sm">
                 Search Results ({results.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-96">
+              <ScrollArea className="h-80 sm:h-96">
                 <div className="space-y-0">
                   {results.map((result, index) => (
                     <div key={result.id}>
                       <div
-                        className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                        className="p-3 sm:p-4 hover:bg-muted/50 active:bg-muted cursor-pointer transition-colors touch-manipulation"
                         onClick={() => handleResultClick(result)}
                       >
                         <div className="space-y-2">
                           {/* File Info */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm font-medium truncate">
                                 {result.file?.filename || 'Unknown File'}
                               </span>
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs flex-shrink-0">
                                 {formatFileType(result.file?.mime_type || '')}
                               </Badge>
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {formatSimilarity(result.similarity)} match
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                              {formatSimilarity(result.similarity)}
                             </Badge>
                           </div>
 
                           {/* Content Preview */}
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground leading-relaxed">
                             {highlightText(
-                              result.content.length > 200 
-                                ? result.content.substring(0, 200) + '...'
+                              result.content.length > 150 
+                                ? result.content.substring(0, 150) + '...'
                                 : result.content,
                               query
                             )}
@@ -241,7 +244,7 @@ export function RAGSearch({
 
                           {/* Metadata */}
                           {result.metadata && (
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                               {result.metadata.chunk_index !== undefined && (
                                 <span>Chunk {result.metadata.chunk_index + 1}</span>
                               )}

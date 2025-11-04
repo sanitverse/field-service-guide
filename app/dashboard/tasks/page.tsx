@@ -102,18 +102,21 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-4 sm:py-6 space-y-4 sm:space-y-6 px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Service Tasks</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Service Tasks</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage and track service tasks for your team
           </p>
         </div>
         
         <RoleGuard allowedRoles={['admin', 'supervisor', 'technician']}>
-          <Button onClick={handleCreateTask}>
+          <Button 
+            onClick={handleCreateTask}
+            className="w-full sm:w-auto touch-manipulation h-12 sm:h-10"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Task
           </Button>
@@ -121,46 +124,46 @@ export default function TasksPage() {
       </div>
 
       {/* Task Statistics and Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="touch-manipulation">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium">Total Tasks</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{tasks.length}</div>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-bold">{tasks.length}</div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Card className="touch-manipulation">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium">Pending</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-bold">
                   {tasks.filter(t => t.status === 'pending').length}
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <Card className="touch-manipulation">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium">In Progress</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-bold">
                   {tasks.filter(t => t.status === 'in_progress').length}
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <Card className="touch-manipulation">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium">Completed</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-bold">
                   {tasks.filter(t => t.status === 'completed').length}
                 </div>
               </CardContent>
@@ -168,43 +171,47 @@ export default function TasksPage() {
           </div>
         </div>
         
-        <div>
+        <div className="col-span-1">
           <TaskProgress tasks={tasks} userId={user?.id} title="My Progress" />
         </div>
       </div>
 
       {/* Tasks Content */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Tasks</CardTitle>
-              <CardDescription>
+        <CardHeader className="px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="min-w-0">
+              <CardTitle className="text-lg sm:text-xl">Tasks</CardTitle>
+              <CardDescription className="text-sm">
                 View and manage all service tasks
               </CardDescription>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('list')}
+                className="touch-manipulation h-10 w-10 p-0 sm:h-8 sm:w-auto sm:px-3"
               >
                 <List className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only sm:ml-2">List</span>
               </Button>
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
+                className="touch-manipulation h-10 w-10 p-0 sm:h-8 sm:w-auto sm:px-3"
               >
                 <LayoutGrid className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only sm:ml-2">Grid</span>
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="text-muted-foreground">Loading tasks...</div>
             </div>
           ) : (
@@ -220,7 +227,7 @@ export default function TasksPage() {
               </TabsContent>
               
               <TabsContent value="grid" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {tasks.map((task) => (
                     <TaskCard
                       key={task.id}
@@ -234,7 +241,7 @@ export default function TasksPage() {
                 </div>
                 
                 {tasks.length === 0 && (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <p className="text-muted-foreground">No tasks found</p>
                   </div>
                 )}

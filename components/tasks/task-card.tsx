@@ -79,6 +79,7 @@ const statusConfig = {
 
 export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null)
   const { showToast } = useNotifications()
 
   const priorityStyle = priorityConfig[task.priority]
@@ -104,26 +105,72 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
     }
   }
 
+  // Touch handlers for mobile interactions
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    setTouchStart({
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    })
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return
+
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - touchStart.x
+    const deltaY = touch.clientY - touchStart.y
+    const deltaTime = Date.now() - touchStart.time
+
+    // Check for swipe gesture (horizontal swipe > 100px, vertical < 50px, time < 300ms)
+    if (Math.abs(deltaX) > 100 && Math.abs(deltaY) < 50 && deltaTime < 300) {
+      if (deltaX > 0) {
+        // Swipe right - quick action (view details)
+        onView?.(task)
+      } else {
+        // Swipe left - quick action (edit if allowed)
+        if (canEdit) {
+          onEdit?.(task)
+        }
+      }
+    }
+
+    setTouchStart(null)
+  }
+
   return (
-    <Card className={cn(
-      "transition-all hover:shadow-md",
-      isOverdue && "border-red-200 bg-red-50/50"
-    )}>
-      <CardHeader className="pb-3">
+    <Card 
+      className={cn(
+        "transition-all hover:shadow-md cursor-pointer select-none",
+        "touch-manipulation", // Optimize for touch
+        isOverdue && "border-red-200 bg-red-50/50"
+      )}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={() => onView?.(task)}
+      data-testid="task-card"
+    >
+      <CardHeader className="pb-3 sm:pb-3">
         <div className="flex items-start justify-between">
-          <div className="space-y-1 flex-1">
-            <CardTitle className="text-lg leading-tight">
+          <div className="space-y-1 flex-1 min-w-0">
+            <CardTitle className="text-base sm:text-lg leading-tight truncate">
               {task.title}
             </CardTitle>
             {task.description && (
-              <CardDescription className="line-clamp-2">
+              <CardDescription className="line-clamp-2 text-sm">
                 {task.description}
               </CardDescription>
             )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-10 w-10 p-0 flex-shrink-0 touch-manipulation"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="sr-only">Open menu</span>
               </Button>
@@ -169,17 +216,17 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
         </div>
       </CardHeader>
 
-      <CardContent className="pb-3">
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Badge className={priorityStyle.color}>
+      <CardContent className="pb-3 sm:pb-3">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3">
+          <Badge className={cn(priorityStyle.color, "text-xs")}>
             {priorityStyle.label}
           </Badge>
-          <Badge className={statusStyle.color}>
+          <Badge className={cn(statusStyle.color, "text-xs")}>
             <StatusIcon className="w-3 h-3 mr-1" />
             {statusStyle.label}
           </Badge>
           {isOverdue && (
-            <Badge className="bg-red-100 text-red-800">
+            <Badge className="bg-red-100 text-red-800 text-xs">
               Overdue
             </Badge>
           )}
@@ -187,36 +234,44 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
 
         <div className="space-y-2 text-sm text-muted-foreground">
           {task.assignee && (
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span>{task.assignee.full_name || task.assignee.email}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <User className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{task.assignee.full_name || task.assignee.email}</span>
             </div>
           )}
           
           {task.due_date && (
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+              <Calendar className="h-4 w-4 flex-shrink-0" />
+              <span className={cn(
+                "text-xs sm:text-sm",
+                isOverdue ? 'text-red-600 font-medium' : ''
+              )}>
                 Due {format(new Date(task.due_date), 'MMM d, yyyy')}
               </span>
             </div>
           )}
           
           {task.location && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>{task.location}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate text-xs sm:text-sm">{task.location}</span>
             </div>
           )}
         </div>
+
+        {/* Mobile swipe hint */}
+        <div className="mt-3 text-xs text-muted-foreground/60 sm:hidden">
+          Swipe right to view • Swipe left to edit
+        </div>
       </CardContent>
 
-      <CardFooter className="pt-0">
-        <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
-          <span>
+      <CardFooter className="pt-0 sm:pt-0">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full text-xs text-muted-foreground gap-1 sm:gap-0">
+          <span className="truncate">
             Created by {task.creator?.full_name || task.creator?.email || 'Unknown'}
           </span>
-          <span>
+          <span className="text-xs">
             {format(new Date(task.created_at), 'MMM d, yyyy')}
           </span>
         </div>
