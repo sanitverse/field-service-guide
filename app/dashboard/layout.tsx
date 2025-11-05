@@ -3,7 +3,6 @@
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { useAuth } from '@/lib/auth-context'
 import { NotificationProvider } from '@/lib/notification-context'
-import { NotificationBell } from '@/components/notifications/notification-bell'
 import { NetworkStatusBadge } from '@/components/pwa/offline-indicator'
 import { InstallPromptCompact } from '@/components/pwa/install-prompt'
 import { Button } from '@/components/ui/button'
@@ -58,6 +57,7 @@ const getNavigation = (userRole: string) => {
       icon: FileText,
       description: 'Manage service tasks'
     },
+
     { 
       name: 'Files', 
       href: '/dashboard/files', 
@@ -107,7 +107,13 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
-    await signOut()
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error during sign out:', error)
+      // Force redirect even if there's an error
+      window.location.href = '/'
+    }
   }
 
   const navigation = getNavigation(profile?.role || 'technician')
@@ -178,7 +184,7 @@ export default function DashboardLayout({
                     >
                       <Bell className="h-5 w-5" />
                       <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                        3
+                        0
                       </span>
                     </Button>
                   </div>

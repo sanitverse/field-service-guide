@@ -230,7 +230,7 @@ export function FileTaskAssociation({
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col bg-white border border-gray-200 shadow-xl text-gray-900">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link className="h-5 w-5" />

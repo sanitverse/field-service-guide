@@ -54,7 +54,7 @@ export type Database = {
           id: string
           title: string
           description: string | null
-          status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          status: 'pending' | 'in_progress' | 'awaiting_review' | 'completed' | 'cancelled'
           priority: 'low' | 'medium' | 'high' | 'urgent'
           assigned_to: string | null
           created_by: string
@@ -67,7 +67,7 @@ export type Database = {
           id?: string
           title: string
           description?: string | null
-          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          status?: 'pending' | 'in_progress' | 'awaiting_review' | 'completed' | 'cancelled'
           priority?: 'low' | 'medium' | 'high' | 'urgent'
           assigned_to?: string | null
           created_by: string
@@ -80,7 +80,7 @@ export type Database = {
           id?: string
           title?: string
           description?: string | null
-          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          status?: 'pending' | 'in_progress' | 'awaiting_review' | 'completed' | 'cancelled'
           priority?: 'low' | 'medium' | 'high' | 'urgent'
           assigned_to?: string | null
           created_by?: string

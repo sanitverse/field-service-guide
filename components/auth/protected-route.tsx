@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
@@ -12,14 +12,21 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, redirectTo = '/auth' }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (!loading && !user) {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      console.log('No user found, redirecting to:', redirectTo)
       router.push(redirectTo)
     }
-  }, [user, loading, router, redirectTo])
+  }, [mounted, user, loading, router, redirectTo])
 
-  if (loading) {
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -28,7 +35,13 @@ export function ProtectedRoute({ children, redirectTo = '/auth' }: ProtectedRout
   }
 
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 font-medium">Redirecting to login...</p>
+        </div>
+      </div>
+    )
   }
 
   return <>{children}</>

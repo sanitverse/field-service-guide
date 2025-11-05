@@ -12,7 +12,9 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  Pause,
+  Trash2
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,8 @@ import { DataTable } from '@/components/ui/data-table'
 import { cn } from '@/lib/utils'
 import { taskOperations } from '@/lib/database'
 import { useNotifications } from '@/lib/notification-context'
+import { useRolePermissions, canUpdateTask } from '@/lib/hooks/use-role-permissions'
+import { TaskDeleteDialog } from './task-delete-dialog'
 import type { ServiceTask } from '@/lib/supabase'
 
 type TaskWithRelations = ServiceTask & {
@@ -70,17 +74,23 @@ const statusConfig = {
     icon: AlertCircle,
     order: 2
   },
+  awaiting_review: { 
+    color: 'bg-orange-100 text-orange-800', 
+    label: 'Awaiting Review',
+    icon: Pause,
+    order: 3
+  },
   completed: { 
     color: 'bg-green-100 text-green-800', 
     label: 'Completed',
     icon: CheckCircle2,
-    order: 3
+    order: 4
   },
   cancelled: { 
     color: 'bg-red-100 text-red-800', 
     label: 'Cancelled',
     icon: XCircle,
-    order: 4
+    order: 5
   },
 }
 
@@ -89,7 +99,9 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
+  const [deleteTask, setDeleteTask] = useState<ServiceTask | null>(null)
   const { showToast } = useNotifications()
+  const permissions = useRolePermissions()
 
   const handleStatusUpdate = async (taskId: string, newStatus: ServiceTask['status']) => {
     setIsUpdating(taskId)
@@ -313,7 +325,7 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
       id: 'actions',
       cell: ({ row }) => {
         const task = row.original
-        const canEdit = currentUserId && (currentUserId === task.created_by || currentUserId === task.assigned_to)
+        const canEdit = canUpdateTask(permissions, task, currentUserId)
         const updating = isUpdating === task.id
 
         return (
@@ -324,7 +336,7 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
               <DropdownMenuItem onClick={() => onView?.(task)}>
                 View Details
               </DropdownMenuItem>
@@ -358,6 +370,20 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
                       Cancel Task
                     </DropdownMenuItem>
                   )}
+                </>
+              )}
+              
+              {/* Delete option for admins */}
+              {permissions.canDeleteTasks && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setDeleteTask(task)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Task
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -430,6 +456,19 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
         searchKey="title"
         searchPlaceholder="Search tasks..."
       />
+
+      {/* Delete confirmation dialog */}
+      {deleteTask && (
+        <TaskDeleteDialog
+          task={deleteTask}
+          open={!!deleteTask}
+          onOpenChange={(open) => !open && setDeleteTask(null)}
+          onSuccess={() => {
+            onRefresh?.()
+            setDeleteTask(null)
+          }}
+        />
+      )}
     </div>
   )
 }

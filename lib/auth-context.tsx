@@ -45,9 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               session.user.user_metadata?.full_name,
               session.user.user_metadata?.role
             )
-            setProfile(userProfile)
+            
+            if (userProfile) {
+              setProfile(userProfile)
+              console.log('Profile loaded successfully:', userProfile.email)
+            } else {
+              // If getOrCreateProfile returns null, create a fallback
+              console.warn('getOrCreateProfile returned null, creating fallback profile')
+              const fallbackProfile = profileOperations.createMockProfile(
+                session.user.id,
+                session.user.email || '',
+                session.user.user_metadata?.full_name,
+                session.user.user_metadata?.role || 'technician'
+              )
+              setProfile(fallbackProfile)
+            }
           } catch (profileError) {
-            console.error('Error handling user profile:', profileError)
+            console.warn('Profile creation issue, using fallback profile:', profileError)
             // Create a fallback profile so the app can still work
             const fallbackProfile = profileOperations.createMockProfile(
               session.user.id,
@@ -56,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               session.user.user_metadata?.role || 'technician'
             )
             setProfile(fallbackProfile)
+            console.log('Fallback profile created:', fallbackProfile.email)
           }
         }
         
@@ -71,24 +86,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email)
+        
         try {
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            const userProfile = await profileOperations.getOrCreateProfile(
-              session.user.id,
-              session.user.email || '',
-              session.user.user_metadata?.full_name,
-              session.user.user_metadata?.role
-            )
-            setProfile(userProfile)
+            try {
+              const userProfile = await profileOperations.getOrCreateProfile(
+                session.user.id,
+                session.user.email || '',
+                session.user.user_metadata?.full_name,
+                session.user.user_metadata?.role
+              )
+              
+              if (userProfile) {
+                setProfile(userProfile)
+                console.log('Profile loaded in auth change:', userProfile.email)
+              } else {
+                // If getOrCreateProfile returns null, create a fallback
+                console.warn('getOrCreateProfile returned null in auth change, creating fallback profile')
+                const fallbackProfile = profileOperations.createMockProfile(
+                  session.user.id,
+                  session.user.email || '',
+                  session.user.user_metadata?.full_name,
+                  session.user.user_metadata?.role || 'technician'
+                )
+                setProfile(fallbackProfile)
+              }
+            } catch (profileError) {
+              console.warn('Profile creation issue in auth change, using fallback profile:', profileError)
+              const fallbackProfile = profileOperations.createMockProfile(
+                session.user.id,
+                session.user.email || '',
+                session.user.user_metadata?.full_name,
+                session.user.user_metadata?.role || 'technician'
+              )
+              setProfile(fallbackProfile)
+              console.log('Fallback profile created in auth change:', fallbackProfile.email)
+            }
           } else {
             setProfile(null)
           }
           
           setLoading(false)
         } catch (error) {
-          console.error('Error in auth state change:', error)
+          console.error('Unexpected error in auth state change:', error)
           setLoading(false)
         }
       }
@@ -130,7 +173,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      // Clear local state first
+      setUser(null)
+      setProfile(null)
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('Error signing out:', error)
+      }
+      
+      // Force redirect to home page
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error)
+      // Force redirect even if there's an error
+      window.location.href = '/'
+    }
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {

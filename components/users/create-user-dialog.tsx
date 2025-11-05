@@ -105,7 +105,7 @@ export function CreateUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200 shadow-xl text-gray-900">
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>

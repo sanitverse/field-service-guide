@@ -11,7 +11,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Pause
+  Pause,
+  Trash2
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,8 @@ import {
 import { cn } from '@/lib/utils'
 import { taskOperations } from '@/lib/database'
 import { useNotifications } from '@/lib/notification-context'
+import { useRolePermissions, canUpdateTask } from '@/lib/hooks/use-role-permissions'
+import { TaskDeleteDialog } from './task-delete-dialog'
 import type { ServiceTask } from '@/lib/supabase'
 
 interface TaskCardProps {
@@ -65,6 +68,11 @@ const statusConfig = {
     label: 'In Progress',
     icon: AlertCircle
   },
+  awaiting_review: { 
+    color: 'bg-orange-100 text-orange-800', 
+    label: 'Awaiting Review',
+    icon: Pause
+  },
   completed: { 
     color: 'bg-green-100 text-green-800', 
     label: 'Completed',
@@ -80,14 +88,16 @@ const statusConfig = {
 export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { showToast } = useNotifications()
+  const permissions = useRolePermissions()
 
   const priorityStyle = priorityConfig[task.priority]
   const statusStyle = statusConfig[task.status]
   const StatusIcon = statusStyle.icon
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
-  const canEdit = currentUserId && (currentUserId === task.created_by || currentUserId === task.assigned_to)
+  const canEdit = canUpdateTask(permissions, task, currentUserId)
 
   const handleStatusUpdate = async (newStatus: ServiceTask['status']) => {
     setIsUpdating(true)
@@ -140,7 +150,8 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
   }
 
   return (
-    <Card 
+    <>
+      <Card 
       className={cn(
         "transition-all hover:shadow-md cursor-pointer select-none",
         "touch-manipulation", // Optimize for touch
@@ -175,7 +186,7 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
                 <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
               <DropdownMenuItem onClick={() => onView?.(task)}>
                 View Details
               </DropdownMenuItem>
@@ -209,6 +220,20 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
                       Cancel Task
                     </DropdownMenuItem>
                   )}
+                </>
+              )}
+              
+              {/* Delete option for admins */}
+              {permissions.canDeleteTasks && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Task
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -277,5 +302,14 @@ export function TaskCard({ task, onEdit, onView, onRefresh, currentUserId }: Tas
         </div>
       </CardFooter>
     </Card>
+
+    {/* Delete confirmation dialog */}
+    <TaskDeleteDialog
+      task={task}
+      open={showDeleteDialog}
+      onOpenChange={setShowDeleteDialog}
+      onSuccess={onRefresh}
+    />
+    </>
   )
 }

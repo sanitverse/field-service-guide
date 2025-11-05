@@ -19,7 +19,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -66,7 +65,19 @@ interface TaskFormProps {
 
 export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps) {
   const { user } = useAuth()
-  const { showToast } = useNotifications()
+  
+  // Safe notification hook usage
+  let showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  try {
+    const notifications = useNotifications()
+    showToast = notifications.showToast
+  } catch {
+    showToast = (message: string) => {
+      console.log(message)
+      alert(message)
+    }
+  }
+  
   const [isLoading, setIsLoading] = useState(false)
   const [users, setUsers] = useState<Profile[]>([])
   const [usersLoaded, setUsersLoaded] = useState(false)
@@ -77,7 +88,7 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
       title: task?.title || '',
       description: task?.description || '',
       priority: task?.priority || 'medium',
-      assigned_to: task?.assigned_to || '',
+      assigned_to: task?.assigned_to || 'unassigned',
       due_date: task?.due_date ? new Date(task.due_date) : undefined,
       location: task?.location || '',
     },
@@ -89,6 +100,30 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
       loadUsers()
     }
   }, [open, usersLoaded])
+
+  // Reset form when task changes (for editing)
+  React.useEffect(() => {
+    if (open && task) {
+      form.reset({
+        title: task.title || '',
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        assigned_to: task.assigned_to || 'unassigned',
+        due_date: task.due_date ? new Date(task.due_date) : undefined,
+        location: task.location || '',
+      })
+    } else if (open && !task) {
+      // Reset to empty form for creating new task
+      form.reset({
+        title: '',
+        description: '',
+        priority: 'medium',
+        assigned_to: 'unassigned',
+        due_date: undefined,
+        location: '',
+      })
+    }
+  }, [open, task, form])
 
   const loadUsers = async () => {
     try {
@@ -105,21 +140,36 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
   }
 
   const onSubmit = async (values: TaskFormValues) => {
-    if (!user) return
+    if (!user) {
+      showToast('You must be logged in to create a task', 'error')
+      return
+    }
 
     setIsLoading(true)
     try {
       const taskData = {
-        ...values,
-        due_date: values.due_date?.toISOString(),
+        title: values.title,
+        description: values.description || null,
+        priority: values.priority,
+        assigned_to: values.assigned_to === 'unassigned' ? null : values.assigned_to,
+        due_date: values.due_date?.toISOString() || null,
+        location: values.location || null,
         created_by: user.id,
+        status: 'pending' as const,
       }
+
+      console.log('Submitting task data:', taskData)
 
       if (task) {
         // Update existing task
         const updatedTask = await taskOperations.updateTask(task.id, taskData)
         if (updatedTask) {
           showToast('Task updated successfully', 'success')
+          onSuccess?.()
+          onOpenChange(false)
+          form.reset()
+        } else {
+          showToast('Failed to update task', 'error')
         }
       } else {
         // Create new task
@@ -129,15 +179,16 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
           if (newTask.assigned_to) {
             showToast('Assignee has been notified', 'info')
           }
+          onSuccess?.()
+          onOpenChange(false)
+          form.reset()
+        } else {
+          showToast('Failed to create task. Please try again.', 'error')
         }
       }
-
-      onSuccess?.()
-      onOpenChange(false)
-      form.reset()
     } catch (error) {
       console.error('Error saving task:', error)
-      showToast('Failed to save task', 'error')
+      showToast('An error occurred while saving the task', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -145,12 +196,12 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-[650px] max-h-[85vh] p-0 gap-0 overflow-hidden bg-white border border-gray-200 shadow-xl">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white">
+          <DialogTitle className="text-2xl font-bold text-gray-900">
             {task ? 'Edit Task' : 'Create New Task'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-gray-500 mt-1">
             {task 
               ? 'Update the task details below.'
               : 'Fill in the details to create a new service task.'
@@ -159,159 +210,212 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter task title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter task description"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full bg-white">
+            <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1 bg-white">
               <FormField
                 control={form.control}
-                name="priority"
+                name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="assigned_to"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assign To</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assignee" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.full_name || user.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="due_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date: Date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-gray-900">
+                      Task Title <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter location" {...field} />
+                      <Input 
+                        placeholder="e.g., Fix HVAC system in Building A" 
+                        className="h-11 bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        {...field} 
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold text-gray-900">
+                      Description
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide detailed information about the task..."
+                        className="resize-none min-h-[100px] bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-900">
+                        Priority <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || 'medium'}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                          <SelectItem value="low">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                              Low
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                              Medium
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="high">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                              High
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="urgent">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                              Urgent
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="assigned_to"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-900">
+                        Assign To
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || 'unassigned'}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <SelectValue placeholder="Select assignee" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                          <SelectItem value="unassigned">
+                            <span className="text-gray-500">Unassigned</span>
+                          </SelectItem>
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id} className="text-gray-900">
+                              {user.full_name || user.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FormField
+                  control={form.control}
+                  name="due_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-sm font-semibold text-gray-900 mb-2">
+                        Due Date
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'h-11 w-full justify-start text-left font-normal',
+                                'bg-white text-gray-900 border-gray-300',
+                                'hover:bg-gray-50 hover:border-gray-400',
+                                'focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                                !field.value && 'text-gray-500'
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date: Date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-900">
+                        Location
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., Building A, Floor 3" 
+                          className="h-11 bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="px-6 py-4 border-t border-gray-100 bg-white gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading}
+                className="h-11 px-6 bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                onClick={form.handleSubmit(onSubmit)}
+                className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border-0"
+              >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {task ? 'Update Task' : 'Create Task'}
               </Button>

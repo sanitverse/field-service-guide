@@ -298,12 +298,12 @@ export function TaskAssistant({ className, onTaskCreated }: TaskAssistantProps) 
 
               <div>
                 <label className="text-sm font-medium mb-1 block">Assign To</label>
-                <Select defaultValue={selectedSuggestion.suggestedAssignee || ''}>
+                <Select defaultValue={selectedSuggestion.suggestedAssignee || 'unassigned'}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {availableUsers.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name || user.email} ({user.role})

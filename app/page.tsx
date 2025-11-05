@@ -24,6 +24,14 @@ import {
 export default function Home() {
   const { user, loading, signOut } = useAuth()
 
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Error during sign out:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -62,7 +70,7 @@ export default function Home() {
                       Dashboard
                     </Link>
                   </Button>
-                  <Button variant="ghost" className="text-gray-600 hover:text-gray-800" onClick={() => signOut()}>
+                  <Button variant="ghost" className="text-gray-600 hover:text-gray-800" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Sign Out</span>
                   </Button>

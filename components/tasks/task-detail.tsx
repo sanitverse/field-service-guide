@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Edit,
-  ArrowLeft
+  ArrowLeft,
+  Pause
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,7 @@ import {
 import { cn } from '@/lib/utils'
 import { taskOperations } from '@/lib/database'
 import { TaskComments } from './task-comments'
+import { useRolePermissions, canUpdateTask } from '@/lib/hooks/use-role-permissions'
 import type { ServiceTask } from '@/lib/supabase'
 
 interface TaskDetailProps {
@@ -65,6 +67,11 @@ const statusConfig = {
     label: 'In Progress',
     icon: AlertCircle
   },
+  awaiting_review: { 
+    color: 'bg-orange-100 text-orange-800', 
+    label: 'Awaiting Review',
+    icon: Pause
+  },
   completed: { 
     color: 'bg-green-100 text-green-800', 
     label: 'Completed',
@@ -79,13 +86,14 @@ const statusConfig = {
 
 export function TaskDetail({ task, onEdit, onBack, onRefresh, currentUserId }: TaskDetailProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const permissions = useRolePermissions()
 
   const priorityStyle = priorityConfig[task.priority]
   const statusStyle = statusConfig[task.status]
   const StatusIcon = statusStyle.icon
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed'
-  const canEdit = currentUserId && (currentUserId === task.created_by || currentUserId === task.assigned_to)
+  const canEdit = canUpdateTask(permissions, task, currentUserId)
 
   const handleStatusUpdate = async (newStatus: ServiceTask['status']) => {
     setIsUpdating(true)
