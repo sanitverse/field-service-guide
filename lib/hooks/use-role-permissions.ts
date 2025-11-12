@@ -51,7 +51,7 @@ export function useRolePermissions(): RolePermissions {
     canRequestTaskDeletion: isSupervisor, // Supervisors can request deletion
     canAssignTasks: isSupervisor || isAdmin, // Supervisors and Admins can assign
     canReassignTasks: isSupervisor || isAdmin, // Supervisors and Admins can reassign
-    canViewAllTasks: isSupervisor || isAdmin, // Supervisors and Admins see all
+    canViewAllTasks: isAdmin, // Only Admins see all tasks (Supervisors see only their created tasks)
     canViewAssignedTasks: true, // All roles can view assigned tasks
     
     // Task status permissions
@@ -87,9 +87,9 @@ export function canUpdateTask(
     return true
   }
   
-  // Supervisors can update tasks they created or any task for assignment purposes
+  // Supervisors can only update tasks they created
   if (permissions.isSupervisor && userId) {
-    return task.created_by === userId || permissions.canAssignTasks
+    return task.created_by === userId
   }
   
   // Technicians can only update tasks assigned to them (status only)
@@ -106,9 +106,14 @@ export function canViewTask(
   task: { assigned_to?: string | null; created_by?: string },
   userId?: string
 ): boolean {
-  // Supervisors and admins can view any task
-  if (permissions.canViewAllTasks) {
+  // Admins can view any task
+  if (permissions.isAdmin) {
     return true
+  }
+  
+  // Supervisors can only view tasks they created
+  if (permissions.isSupervisor && userId) {
+    return task.created_by === userId
   }
   
   // Technicians can only view tasks assigned to them

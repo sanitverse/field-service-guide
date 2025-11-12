@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { CalendarIcon, Loader2 } from 'lucide-react'
+import { CalendarIcon, Loader2, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+
 import { cn } from '@/lib/utils'
 import { taskOperations, profileOperations } from '@/lib/database'
 import { useAuth } from '@/lib/auth-context'
@@ -127,15 +128,27 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
 
   const loadUsers = async () => {
     try {
-      const profiles = await profileOperations.getAllProfiles()
-      // Filter users based on role - only show technicians, supervisors, and admins for assignment
-      const assignableUsers = profiles.filter(profile => 
-        ['technician', 'supervisor', 'admin'].includes(profile.role)
-      )
-      setUsers(assignableUsers)
+      console.log('🔧 Loading technicians directly...')
+      const technicians = await profileOperations.getTechnicians()
+      console.log('📋 Technicians fetched:', technicians)
+      console.log('📋 Technician count:', technicians.length)
+      
+      // Log each technician
+      technicians.forEach((technician, index) => {
+        console.log(`👤 Technician ${index + 1}:`, {
+          id: technician.id,
+          name: technician.full_name,
+          email: technician.email,
+          role: technician.role,
+          status: technician.status
+        })
+      })
+      
+      setUsers(technicians)
       setUsersLoaded(true)
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error('❌ Error loading technicians:', error)
+      setUsersLoaded(true) // Set to true even on error to show the UI
     }
   }
 
@@ -165,7 +178,10 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
         const updatedTask = await taskOperations.updateTask(task.id, taskData)
         if (updatedTask) {
           showToast('Task updated successfully', 'success')
-          onSuccess?.()
+          // Force a small delay to ensure database is updated
+          setTimeout(() => {
+            onSuccess?.()
+          }, 100)
           onOpenChange(false)
           form.reset()
         } else {
@@ -179,7 +195,10 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
           if (newTask.assigned_to) {
             showToast('Assignee has been notified', 'info')
           }
-          onSuccess?.()
+          // Force a small delay to ensure database is updated
+          setTimeout(() => {
+            onSuccess?.()
+          }, 100)
           onOpenChange(false)
           form.reset()
         } else {
@@ -252,6 +271,8 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
                 )}
               />
 
+
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <FormField
                   control={form.control}
@@ -305,23 +326,59 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-semibold text-gray-900">
-                        Assign To
+                        Assign To {usersLoaded && (
+                          <span className="text-xs text-gray-500 font-normal">
+                            ({users.length} technician{users.length !== 1 ? 's' : ''} available)
+                          </span>
+                        )}
+                        {!usersLoaded && (
+                          <span className="text-xs text-orange-500 font-normal">
+                            (Loading...)
+                          </span>
+                        )}
                       </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value || 'unassigned'}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || 'unassigned'} disabled={!usersLoaded}>
                         <FormControl>
                           <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            <SelectValue placeholder="Select assignee" />
+                            <SelectValue placeholder={usersLoaded ? "Select assignee" : "Loading technicians..."} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-white border border-gray-200 shadow-lg">
                           <SelectItem value="unassigned">
-                            <span className="text-gray-500">Unassigned</span>
+                            <span className="flex items-center gap-2 text-gray-500">
+                              <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                                <span className="text-xs">?</span>
+                              </span>
+                              Unassigned
+                            </span>
                           </SelectItem>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id} className="text-gray-900">
-                              {user.full_name || user.email}
+                          {users.length > 0 ? (
+                            users.map((user) => (
+                              <SelectItem key={user.id} value={user.id} className="text-gray-900">
+                                <span className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span className="text-xs font-medium text-blue-600">
+                                      {(user.full_name || user.email).charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{user.full_name || user.email}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 capitalize">{user.role}</span>
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Active"></span>
+                                    </div>
+                                  </div>
+                                </span>
+                              </SelectItem>
+                            ))
+                          ) : usersLoaded ? (
+                            <SelectItem value="no-technicians" disabled>
+                              <span className="flex items-center gap-2 text-gray-400">
+                                <Users className="w-4 h-4" />
+                                No technicians available
+                              </span>
                             </SelectItem>
-                          ))}
+                          ) : null}
                         </SelectContent>
                       </Select>
                       <FormMessage className="text-xs" />
@@ -344,6 +401,7 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
                           <FormControl>
                             <Button
                               variant="outline"
+                              type="button"
                               className={cn(
                                 'h-11 w-full justify-start text-left font-normal',
                                 'bg-white text-gray-900 border-gray-300',
@@ -369,7 +427,6 @@ export function TaskForm({ open, onOpenChange, task, onSuccess }: TaskFormProps)
                             disabled={(date: Date) =>
                               date < new Date(new Date().setHours(0, 0, 0, 0))
                             }
-                            initialFocus
                           />
                         </PopoverContent>
                       </Popover>

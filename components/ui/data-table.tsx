@@ -69,7 +69,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 gap-4">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -77,30 +77,40 @@ export function DataTable<TData, TValue>({
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="max-w-sm h-10 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           />
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button 
+              variant="outline" 
+              className="ml-auto h-10"
+            >
               Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-3 py-3 border-b border-gray-100 bg-gray-50/50">
+              <p className="text-sm font-semibold text-gray-900">Toggle Columns</p>
+              <p className="text-xs text-gray-500 mt-1">Show or hide table columns</p>
+            </div>
             {table
               .getAllColumns()
               .filter((column) => column.getCanHide())
               .map((column) => {
+                const columnLabel = column.id
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, l => l.toUpperCase())
+                
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
-                    className="capitalize"
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) =>
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.id}
+                    {columnLabel}
                   </DropdownMenuCheckboxItem>
                 )
               })}
@@ -157,25 +167,41 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+      <div className="flex items-center justify-between py-4">
+        <div className="flex-1 text-sm text-gray-600">
+          Showing {table.getFilteredRowModel().rows.length} of {data.length} total entries
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <span className="ml-2 text-blue-600 font-medium">
+              ({table.getFilteredSelectedRowModel().rows.length} selected)
+            </span>
+          )}
         </div>
-        <div className="space-x-2">
+        <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            className="h-9 px-4 bg-white text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Previous
           </Button>
+          <div className="flex items-center gap-1 text-sm text-gray-600">
+            <span>Page</span>
+            <span className="font-medium text-gray-900">
+              {table.getState().pagination.pageIndex + 1}
+            </span>
+            <span>of</span>
+            <span className="font-medium text-gray-900">
+              {table.getPageCount()}
+            </span>
+          </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            className="h-9 px-4 bg-white text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             Next
           </Button>

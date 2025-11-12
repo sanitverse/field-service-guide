@@ -106,9 +106,18 @@ export function TaskComments({ taskId, taskTitle }: TaskCommentsProps) {
         showToast('Comment added successfully', 'success')
         // The real-time subscription will handle updating the comments list
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating comment:', error)
-      showToast('Failed to add comment', 'error')
+      
+      // Provide specific error messages for different types of errors
+      if (error?.code === '42501') {
+        showToast('Permission denied: Unable to create comment. Please contact your administrator.', 'error')
+        console.error('RLS Policy Error - User may not have proper permissions or profile setup')
+      } else if (error?.message?.includes('row-level security')) {
+        showToast('Security policy violation: Unable to create comment.', 'error')
+      } else {
+        showToast('Failed to add comment. Please try again.', 'error')
+      }
     } finally {
       setIsSubmitting(false)
     }

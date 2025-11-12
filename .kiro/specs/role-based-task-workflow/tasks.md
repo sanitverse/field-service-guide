@@ -100,10 +100,29 @@
   - Test notification system triggers and delivery
   - _Requirements: All requirements_
 
-- [ ] 12. Update existing components for role-based workflow
+- [x] 12. Fix task detail dropdown styling and status consistency
+
+
+
+  - Fix dropdown styling in task detail view to match UI design system
+  - Add missing 'awaiting_review' status to all status configurations
+  - Ensure consistent white background and proper contrast for all dropdowns
+  - Fix status dropdown in task detail view to display properly
+  - Update status configurations across all task components for consistency
+  - _Requirements: 2.5, 3.1, 5.3_
+
+- [x] 13. Fix task comments RLS policy violations
+  - Diagnose and fix RLS policy errors preventing comment creation
+  - Update task_comments RLS policies to allow authenticated users to create comments
+  - Improve error handling in comment operations with better user feedback
+  - Create diagnostic and fix scripts for RLS policy issues
+  - Test comment creation functionality after policy updates
+  - _Requirements: 3.2, 5.3_
+
+- [ ] 14. Update existing components for role-based workflow
   - Update existing TaskForm to use new SupervisorTaskForm
   - Modify TaskCard to show role-appropriate actions
   - Update task API routes to enforce role-based permissions
   - Refactor task list page to use new role-based component
-  - Update navigation to hide/show menu items based on role
+  - Update navigation to hide/show menu items based to role
   - _Requirements: All requirements_

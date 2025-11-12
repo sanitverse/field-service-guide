@@ -68,7 +68,7 @@ export function FileBrowser({
   showTaskAssociation = true,
   className
 }: FileBrowserProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [files, setFiles] = useState<FileWithDetails[]>([])
   const [filteredFiles, setFilteredFiles] = useState<FileWithDetails[]>([])
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
@@ -83,6 +83,7 @@ export function FileBrowser({
 
   // Load files
   const loadFiles = useCallback(async () => {
+    console.log('🔄 Loading files...')
     setIsLoading(true)
     setError(null)
 
@@ -92,37 +93,59 @@ export function FileBrowser({
         params.append('taskId', relatedTaskId)
       }
 
+      // Add user ID and role for filtering
+      if (user?.id) {
+        params.append('userId', user.id)
+      }
+      if (profile?.role) {
+        params.append('userRole', profile.role)
+      }
+
+      console.log('📡 Fetching from API:', `/api/files?${params}`)
       const response = await fetch(`/api/files?${params}`)
       const data = await response.json()
+
+      console.log('📥 API Response:', { ok: response.ok, status: response.status, data })
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to load files')
       }
 
+      console.log('✅ Setting files:', data.files?.length || 0, 'files')
       setFiles(data.files || [])
     } catch (err) {
+      console.error('❌ Error loading files:', err)
       setError(err instanceof Error ? err.message : 'Failed to load files')
     } finally {
       setIsLoading(false)
     }
-  }, [relatedTaskId])
+  }, [relatedTaskId, user?.id, profile?.role])
 
   // Filter and sort files
   useEffect(() => {
+    console.log('🔍 Filtering files...', {
+      totalFiles: files.length,
+      searchQuery,
+      fileTypeFilter
+    })
+    
     let filtered = [...files]
 
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
+      const beforeSearch = filtered.length
       filtered = filtered.filter(file => 
         file.filename.toLowerCase().includes(query) ||
         file.uploader?.full_name?.toLowerCase().includes(query) ||
         file.related_task?.title?.toLowerCase().includes(query)
       )
+      console.log(`🔎 Search filter: ${beforeSearch} → ${filtered.length} files`)
     }
 
     // Apply file type filter
     if (fileTypeFilter !== 'all') {
+      const beforeTypeFilter = filtered.length
       filtered = filtered.filter(file => {
         switch (fileTypeFilter) {
           case 'images':
@@ -139,6 +162,7 @@ export function FileBrowser({
             return true
         }
       })
+      console.log(`📁 Type filter (${fileTypeFilter}): ${beforeTypeFilter} → ${filtered.length} files`)
     }
 
     // Apply sorting
@@ -156,6 +180,8 @@ export function FileBrowser({
       return 0
     })
 
+    console.log('✅ Final filtered files:', filtered.length)
+    console.log('Files to display:', filtered)
     setFilteredFiles(filtered)
   }, [files, searchQuery, fileTypeFilter, sortField, sortDirection])
 
@@ -194,8 +220,19 @@ export function FileBrowser({
 
   const handleDeleteFile = async (fileId: string) => {
     try {
+      // Get the current session to include auth token
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('Not authenticated')
+      }
+
       const response = await fetch(`/api/files?id=${fileId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
       })
 
       if (!response.ok) {
@@ -219,8 +256,21 @@ export function FileBrowser({
     if (selectedFiles.size === 0) return
 
     try {
+      // Get the current session to include auth token
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('Not authenticated')
+      }
+
       const deletePromises = Array.from(selectedFiles).map(fileId =>
-        fetch(`/api/files?id=${fileId}`, { method: 'DELETE' })
+        fetch(`/api/files?id=${fileId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        })
       )
 
       await Promise.all(deletePromises)
@@ -344,16 +394,26 @@ export function FileBrowser({
             </div>
             
             <Select value={fileTypeFilter} onValueChange={setFileTypeFilter}>
-              <SelectTrigger className="w-48">
-                <Filter className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-48 h-10 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <Filter className="h-4 w-4 mr-2 text-gray-600" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Files</SelectItem>
-                <SelectItem value="images">Images</SelectItem>
-                <SelectItem value="documents">Documents</SelectItem>
-                <SelectItem value="processed">Processed</SelectItem>
-                <SelectItem value="unprocessed">Unprocessed</SelectItem>
+              <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                <SelectItem value="all" className="text-gray-900 hover:bg-gray-50 font-medium">
+                  All Files
+                </SelectItem>
+                <SelectItem value="images" className="text-gray-900 hover:bg-gray-50">
+                  Images
+                </SelectItem>
+                <SelectItem value="documents" className="text-gray-900 hover:bg-gray-50">
+                  Documents
+                </SelectItem>
+                <SelectItem value="processed" className="text-gray-900 hover:bg-gray-50">
+                  Processed
+                </SelectItem>
+                <SelectItem value="unprocessed" className="text-gray-900 hover:bg-gray-50">
+                  Unprocessed
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

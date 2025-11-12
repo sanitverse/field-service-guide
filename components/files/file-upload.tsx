@@ -125,14 +125,25 @@ export function FileUpload({
   }, [])
 
   const uploadFile = async (fileWithProgress: FileWithProgress, index: number): Promise<UploadedFile | null> => {
+    console.log('🔐 Upload file - User check:', {
+      userExists: !!user,
+      userId: user?.id,
+      userEmail: user?.email
+    })
+
     if (!user) {
+      console.error('❌ User not authenticated!')
       throw new Error('User not authenticated')
     }
+
+    console.log('✅ User authenticated:', user.id)
 
     const { file } = fileWithProgress
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
     const filePath = `${user.id}/${fileName}`
+
+    console.log('📁 File path:', filePath)
 
     // Update status to uploading
     setFiles(prev => prev.map((f, i) => 
@@ -150,6 +161,15 @@ export function FileUpload({
       }
 
       // Save file record to database
+      console.log('📝 Inserting file record:', {
+        filename: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.type,
+        uploaded_by: user.id,
+        related_task_id: relatedTaskId || null
+      })
+
       const { data: fileRecord, error: dbError } = await supabase
         .from('files')
         .insert({
@@ -164,10 +184,17 @@ export function FileUpload({
         .single()
 
       if (dbError) {
+        console.error('❌ Database insert error:', dbError)
+        console.error('Error code:', dbError.code)
+        console.error('Error message:', dbError.message)
+        console.error('Error details:', dbError.details)
+        
         // Clean up uploaded file if database insert fails
         await supabase.storage.from('task-files').remove([filePath])
         throw dbError
       }
+
+      console.log('✅ File record created:', fileRecord)
 
       // Update status to completed
       setFiles(prev => prev.map((f, i) => 
@@ -251,40 +278,46 @@ export function FileUpload({
   const hasErrors = files.some(f => f.status === 'error')
 
   return (
-    <Card className={cn('w-full', className)}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
+    <Card className={cn('w-full bg-white border-gray-200 shadow-sm', className)}>
+      <CardHeader className="bg-white border-b border-gray-100">
+        <CardTitle className="flex items-center gap-2 text-gray-900">
+          <Upload className="h-5 w-5 text-blue-600" />
           Upload Files
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-gray-600">
           Drag and drop files here or click to browse. 
           Maximum {maxFiles} files, {Math.round(maxFileSize / 1024 / 1024)}MB each.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 bg-white">
         {/* Drop Zone */}
         <div
           className={cn(
-            'border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-colors cursor-pointer touch-manipulation',
+            'border-2 border-dashed rounded-lg p-4 sm:p-8 text-center transition-all cursor-pointer touch-manipulation',
             'min-h-[120px] sm:min-h-[160px] flex flex-col justify-center',
             isDragOver 
-              ? 'border-primary bg-primary/5' 
-              : 'border-muted-foreground/25 hover:border-muted-foreground/50 active:border-primary active:bg-primary/5'
+              ? 'border-blue-500 bg-blue-50 shadow-sm' 
+              : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50 active:border-blue-500 active:bg-blue-50'
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-4 text-muted-foreground" />
-          <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
+          <Upload className={cn(
+            "h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-4 transition-colors",
+            isDragOver ? "text-blue-600" : "text-gray-600"
+          )} />
+          <p className={cn(
+            "text-base sm:text-lg font-semibold mb-1 sm:mb-2 transition-colors",
+            isDragOver ? "text-blue-700" : "text-gray-900"
+          )}>
             {isDragOver ? 'Drop files here' : 'Tap to choose files'}
           </p>
-          <p className="text-xs sm:text-sm text-muted-foreground px-2">
+          <p className="text-xs sm:text-sm text-gray-600 px-2 font-medium">
             Images, PDFs, documents up to {Math.round(maxFileSize / 1024 / 1024)}MB
           </p>
-          <p className="text-xs text-muted-foreground mt-1 sm:hidden">
+          <p className="text-xs text-gray-500 mt-1 sm:hidden">
             Or drag and drop files here
           </p>
         </div>

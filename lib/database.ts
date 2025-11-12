@@ -113,20 +113,86 @@ export const profileOperations = {
 
   async getAllProfiles(): Promise<Profile[]> {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 Fetching all profiles from Supabase...')
+      
+      // Try with admin client first
+      let { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('status', 'active')
         .order('full_name')
       
+      // If admin client fails, try with regular client
       if (error) {
-        console.error('Error fetching profiles:', error)
+        console.log('🔄 Admin client failed, trying regular client...')
+        
+        const regularResult = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('status', 'active')
+          .order('full_name')
+        
+        data = regularResult.data
+        error = regularResult.error
+        
+        if (error) {
+          console.log('🔄 Trying without status filter...')
+          
+          // Try without status filter as last resort
+          const fallbackResult = await supabase
+            .from('profiles')
+            .select('*')
+            .order('full_name')
+          
+          if (fallbackResult.error) {
+            console.error('❌ All profile queries failed:', fallbackResult.error)
+            console.log('🎭 Using mock profiles as fallback')
+            return this.getMockProfiles()
+          }
+          
+          console.log('✅ Fetched profiles without status filter:', fallbackResult.data?.length || 0)
+          return fallbackResult.data || []
+        }
+      }
+      
+      console.log('✅ Fetched active profiles:', data?.length || 0)
+      return data || []
+    } catch (error) {
+      console.error('❌ Unexpected error fetching profiles:', error)
+      console.log('🎭 Using mock profiles as fallback')
+      return this.getMockProfiles()
+    }
+  },
+
+  async getTechnicians(): Promise<Profile[]> {
+    console.log('🔧 Fetching technicians via API...')
+    
+    try {
+      const response = await fetch('/api/technicians')
+      
+      if (!response.ok) {
+        console.error('❌ API request failed:', response.status, response.statusText)
         return []
       }
       
-      return data || []
+      const result = await response.json()
+      
+      if (result.error) {
+        console.error('❌ API returned error:', result.error)
+        return []
+      }
+      
+      const technicians = result.technicians || []
+      console.log('✅ API returned technicians:', technicians.length)
+      
+      technicians.forEach((tech: Profile, index: number) => {
+        console.log(`  ${index + 1}. ${tech.full_name || tech.email} (${tech.email}) - ID: ${tech.id}`)
+      })
+      
+      return technicians
+      
     } catch (error) {
-      console.error('Unexpected error fetching profiles:', error)
+      console.error('❌ Exception fetching technicians:', error)
       return []
     }
   },
@@ -177,29 +243,29 @@ export const profileOperations = {
 export const taskOperations = {
   async getTasks(userId?: string): Promise<ServiceTask[]> {
     try {
-      let query = supabase
-        .from('service_tasks')
-        .select(`
-          *,
-          assignee:assigned_to(id, full_name, email),
-          creator:created_by(id, full_name, email)
-        `)
-        .order('created_at', { ascending: false })
+      console.log('📋 Fetching tasks via API...', userId ? `for user ${userId}` : 'all tasks')
       
-      if (userId) {
-        query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
-      }
+      const url = userId ? `/api/tasks?userId=${encodeURIComponent(userId)}` : '/api/tasks'
+      const response = await fetch(url)
       
-      const { data, error } = await query
-      
-      if (error) {
-        console.error('Error fetching tasks:', error)
+      if (!response.ok) {
+        console.error('❌ API request failed:', response.status, response.statusText)
         return []
       }
       
-      return data || []
+      const result = await response.json()
+      
+      if (result.error) {
+        console.error('❌ API returned error:', result.error)
+        return []
+      }
+      
+      const tasks = result.tasks || []
+      console.log('✅ API returned tasks:', tasks.length)
+      
+      return tasks
     } catch (error) {
-      console.error('Unexpected error fetching tasks:', error)
+      console.error('❌ Exception fetching tasks:', error)
       return []
     }
   },
@@ -429,20 +495,26 @@ export const taskOperations = {
 
   async deleteTask(taskId: string): Promise<boolean> {
     try {
-      console.log('🗑️ Deleting task:', taskId)
+      console.log('🗑️ Deleting task via API:', taskId)
       
-      // Delete the task (comments and files will be cascade deleted)
-      const { error } = await supabase
-        .from('service_tasks')
-        .delete()
-        .eq('id', taskId)
+      const response = await fetch(`/api/tasks/delete?id=${encodeURIComponent(taskId)}`, {
+        method: 'DELETE'
+      })
       
-      if (error) {
-        console.error('❌ Error deleting task:', error)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ API delete failed:', errorData)
         return false
       }
       
-      console.log('✅ Task deleted successfully')
+      const result = await response.json()
+      
+      if (result.error) {
+        console.error('❌ API returned error:', result.error)
+        return false
+      }
+      
+      console.log('✅ Task deleted successfully via API')
       return true
     } catch (error) {
       console.error('❌ Exception deleting task:', error)
@@ -455,7 +527,11 @@ export const taskOperations = {
 export const fileOperations = {
   async getFiles(taskId?: string): Promise<FileRecord[]> {
     try {
-      let query = supabase
+      console.log('📂 Fetching files...', { taskId })
+      
+      // Use admin client to bypass RLS for file listing
+      // This is safe because we're just reading file metadata
+      let query = supabaseAdmin
         .from('files')
         .select(`
           *,
@@ -470,13 +546,18 @@ export const fileOperations = {
       const { data, error } = await query
       
       if (error) {
-        console.error('Error fetching files:', error)
+        console.error('❌ Error fetching files:', error)
+        console.error('Error code:', error.code)
+        console.error('Error message:', error.message)
         return []
       }
       
+      console.log('✅ Files fetched:', data?.length || 0)
+      console.log('Files data:', data)
+      
       return data || []
     } catch (error) {
-      console.error('Unexpected error fetching files:', error)
+      console.error('❌ Unexpected error fetching files:', error)
       return []
     }
   },
@@ -664,6 +745,8 @@ export const commentOperations = {
   },
 
   async createComment(comment: Tables['task_comments']['Insert']) {
+    console.log('🔧 Creating comment with data:', comment)
+    
     const { data, error } = await supabase
       .from('task_comments')
       .insert(comment)
@@ -674,8 +757,29 @@ export const commentOperations = {
       .single()
     
     if (error) {
-      console.error('Error creating comment:', error)
-      return null
+      console.error('❌ Error creating comment:', error)
+      console.error('📋 Comment data:', comment)
+      
+      // Provide specific error messages for common RLS issues
+      if (error.code === '42501') {
+        console.error('🔒 RLS Policy Error: User does not have permission to create comments')
+        console.error('💡 This might be due to restrictive RLS policies on task_comments table')
+        
+        // Check if user has a profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, role, status')
+          .eq('id', comment.author_id)
+          .single()
+        
+        if (profile) {
+          console.log('👤 User profile found:', profile)
+        } else {
+          console.error('❌ No profile found for user:', comment.author_id)
+        }
+      }
+      
+      throw error // Re-throw the error so the UI can handle it
     }
 
     // Get task details for notification

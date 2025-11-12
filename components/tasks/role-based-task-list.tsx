@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus, LayoutGrid, List, Filter, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -22,10 +22,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { TaskList } from '@/components/tasks/task-list'
 import { TaskCard } from '@/components/tasks/task-card'
-import { taskOperations } from '@/lib/database'
+
 import { useAuth } from '@/lib/auth-context'
 
-import type { ServiceTask, Profile } from '@/lib/supabase'
+import type { ServiceTask } from '@/lib/supabase'
 
 type TaskWithRelations = ServiceTask & {
   assignee?: { id: string; full_name: string | null; email: string }
@@ -64,6 +64,11 @@ export function RoleBasedTaskList({
     // Role-based filtering
     if (isTechnician && task.assigned_to !== user?.id) {
       return false // Technicians only see assigned tasks
+    }
+    
+    // Supervisors only see tasks they created
+    if (isSupervisor && task.created_by !== user?.id) {
+      return false
     }
     
     // Status filter
@@ -119,12 +124,12 @@ export function RoleBasedTaskList({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">
-            {isTechnician ? 'My Tasks' : 'Service Tasks'}
+            {isTechnician ? 'My Tasks' : 'My Created Tasks'}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             {isTechnician 
               ? 'View and update your assigned tasks'
-              : 'Manage and track service tasks for your team'
+              : 'Manage and track tasks you have created'
             }
           </p>
         </div>
@@ -239,35 +244,90 @@ export function RoleBasedTaskList({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-semibold text-gray-900">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="awaiting_review">Awaiting Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                      All Statuses
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="pending" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                      Pending
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="in_progress" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      In Progress
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="awaiting_review" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                      Awaiting Review
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="completed" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Completed
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="cancelled" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      Cancelled
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             {/* Priority Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
+              <label className="text-sm font-semibold text-gray-900">Priority</label>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All priorities" />
+                <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <SelectValue placeholder="All Priorities" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                      All Priorities
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="low" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Low
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="medium" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                      Medium
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="high" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                      High
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="urgent" className="text-gray-900 hover:bg-gray-50">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      Urgent
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -275,17 +335,34 @@ export function RoleBasedTaskList({
             {/* Assignee Filter - Supervisors only */}
             {isSupervisor && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assignee</label>
+                <label className="text-sm font-semibold text-gray-900">Assignee</label>
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All assignees" />
+                  <SelectTrigger className="h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <SelectValue placeholder="All Assignees" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Assignees</SelectItem>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                    <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                      <span className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-500" />
+                        All Assignees
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="unassigned" className="text-gray-900 hover:bg-gray-50">
+                      <span className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-400" />
+                        Unassigned
+                      </span>
+                    </SelectItem>
                     {assignees.map((assignee) => (
-                      <SelectItem key={assignee.id} value={assignee.id}>
-                        {assignee.full_name || assignee.email}
+                      <SelectItem key={assignee.id} value={assignee.id} className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-xs font-medium text-blue-600">
+                              {(assignee.full_name || assignee.email).charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          {assignee.full_name || assignee.email}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -295,22 +372,30 @@ export function RoleBasedTaskList({
             
             {/* View Mode Toggle */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">View</label>
-              <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-900">View</label>
+              <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg">
                 <Button
-                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className="flex-1"
+                  className={`flex-1 h-9 ${
+                    viewMode === 'list' 
+                      ? 'bg-white text-gray-900 shadow-sm border-0' 
+                      : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                  }`}
                 >
                   <List className="h-4 w-4 mr-2" />
                   List
                 </Button>
                 <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
-                  className="flex-1"
+                  className={`flex-1 h-9 ${
+                    viewMode === 'grid' 
+                      ? 'bg-white text-gray-900 shadow-sm border-0' 
+                      : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                  }`}
                 >
                   <LayoutGrid className="h-4 w-4 mr-2" />
                   Grid
@@ -327,7 +412,7 @@ export function RoleBasedTaskList({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="min-w-0">
               <CardTitle className="text-lg sm:text-xl">
-                {isTechnician ? 'My Assigned Tasks' : 'All Tasks'}
+                {isTechnician ? 'My Assigned Tasks' : 'My Created Tasks'}
               </CardTitle>
               <CardDescription className="text-sm">
                 {filteredTasks.length} of {tasks.length} tasks

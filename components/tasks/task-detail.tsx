@@ -126,11 +126,34 @@ export function TaskDetail({ task, onEdit, onBack, onRefresh, currentUserId }: T
           </div>
         </div>
         
-        {canEdit && (
+        {canEdit && !permissions.isTechnician && (
           <Button onClick={() => onEdit?.(task)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Task
           </Button>
+        )}
+        
+        {/* Technician actions */}
+        {permissions.isTechnician && task.assigned_to === currentUserId && (
+          <div className="flex gap-2">
+            {task.status === 'pending' && (
+              <Button 
+                onClick={() => handleStatusUpdate('in_progress')}
+                disabled={isUpdating}
+              >
+                Start Working
+              </Button>
+            )}
+            {task.status === 'in_progress' && (
+              <Button 
+                onClick={() => handleStatusUpdate('completed')}
+                disabled={isUpdating}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Mark Complete
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -169,8 +192,8 @@ export function TaskDetail({ task, onEdit, onBack, onRefresh, currentUserId }: T
             </CardContent>
           </Card>
 
-          {/* Status Management */}
-          {canEdit && (
+          {/* Status Management - Supervisors/Admins only */}
+          {canEdit && !permissions.isTechnician && (
             <Card>
               <CardHeader>
                 <CardTitle>Status Management</CardTitle>
@@ -185,14 +208,40 @@ export function TaskDetail({ task, onEdit, onBack, onRefresh, currentUserId }: T
                     onValueChange={handleStatusUpdate}
                     disabled={isUpdating}
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-[200px] h-11 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                      <SelectItem value="pending" className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+                          Pending
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="in_progress" className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          In Progress
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="awaiting_review" className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                          Awaiting Review
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="completed" className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          Completed
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="cancelled" className="text-gray-900 hover:bg-gray-50">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                          Cancelled
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   {isUpdating && (
@@ -201,6 +250,30 @@ export function TaskDetail({ task, onEdit, onBack, onRefresh, currentUserId }: T
                     </span>
                   )}
                 </div>
+                
+
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Technician Status Info - Read Only */}
+          {permissions.isTechnician && task.assigned_to === currentUserId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Task Status</CardTitle>
+                <CardDescription>
+                  Current status of your assigned task
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Badge className={statusStyle.color}>
+                    <StatusIcon className="w-3 h-3 mr-1" />
+                    {statusStyle.label}
+                  </Badge>
+                </div>
+                
+
               </CardContent>
             </Card>
           )}

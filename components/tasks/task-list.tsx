@@ -327,6 +327,20 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
         const task = row.original
         const canEdit = canUpdateTask(permissions, task, currentUserId)
         const updating = isUpdating === task.id
+        const isTechnician = permissions.isTechnician
+        const isAssignedTechnician = isTechnician && task.assigned_to === currentUserId
+
+        // Debug logging
+        console.log('Task actions:', {
+          taskId: task.id,
+          taskTitle: task.title,
+          createdBy: task.created_by,
+          currentUserId,
+          canEdit,
+          isTechnician,
+          isSupervisor: permissions.isSupervisor,
+          isAdmin: permissions.isAdmin
+        })
 
         return (
           <DropdownMenu>
@@ -340,9 +354,14 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
               <DropdownMenuItem onClick={() => onView?.(task)}>
                 View Details
               </DropdownMenuItem>
-              {canEdit && (
+              
+              {/* Supervisor/Admin actions */}
+              {canEdit && !isTechnician && (
                 <>
-                  <DropdownMenuItem onClick={() => onEdit?.(task)}>
+                  <DropdownMenuItem onClick={() => {
+                    console.log('Edit clicked for task:', task.id)
+                    onEdit?.(task)
+                  }}>
                     Edit Task
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -370,10 +389,35 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
                       Cancel Task
                     </DropdownMenuItem>
                   )}
+
                 </>
               )}
               
-              {/* Delete option for admins */}
+              {/* Technician actions - only for assigned tasks */}
+              {isAssignedTechnician && (
+                <>
+                  <DropdownMenuSeparator />
+                  {task.status === 'pending' && (
+                    <DropdownMenuItem 
+                      onClick={() => handleStatusUpdate(task.id, 'in_progress')}
+                      disabled={updating}
+                    >
+                      Start Working
+                    </DropdownMenuItem>
+                  )}
+                  {task.status === 'in_progress' && (
+                    <DropdownMenuItem 
+                      onClick={() => handleStatusUpdate(task.id, 'completed')}
+                      disabled={updating}
+                      className="text-green-600 focus:text-green-600"
+                    >
+                      Mark Complete
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )}
+              
+              {/* Delete option for admins only */}
               {permissions.canDeleteTasks && (
                 <>
                   <DropdownMenuSeparator />
@@ -396,52 +440,130 @@ export function TaskList({ tasks, onEdit, onView, onRefresh, currentUserId }: Ta
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg border">
         <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium">Status:</label>
+          <label className="text-sm font-semibold text-gray-900">Status:</label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px] h-10 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectContent className="bg-white border border-gray-200 shadow-lg">
+              <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                  All Status
+                </span>
+              </SelectItem>
+              <SelectItem value="pending" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  Pending
+                </span>
+              </SelectItem>
+              <SelectItem value="in_progress" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  In Progress
+                </span>
+              </SelectItem>
+              <SelectItem value="awaiting_review" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                  Awaiting Review
+                </span>
+              </SelectItem>
+              <SelectItem value="completed" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  Completed
+                </span>
+              </SelectItem>
+              <SelectItem value="cancelled" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  Cancelled
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium">Priority:</label>
+          <label className="text-sm font-semibold text-gray-900">Priority:</label>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px] h-10 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+            <SelectContent className="bg-white border border-gray-200 shadow-lg">
+              <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                  All Priority
+                </span>
+              </SelectItem>
+              <SelectItem value="urgent" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                  Urgent
+                </span>
+              </SelectItem>
+              <SelectItem value="high" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                  High
+                </span>
+              </SelectItem>
+              <SelectItem value="medium" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  Medium
+                </span>
+              </SelectItem>
+              <SelectItem value="low" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  Low
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium">Assignee:</label>
+          <label className="text-sm font-semibold text-gray-900">Assignee:</label>
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px] h-10 bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              <SelectItem value="me">My Tasks</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
+            <SelectContent className="bg-white border border-gray-200 shadow-lg">
+              <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  All Users
+                </span>
+              </SelectItem>
+              <SelectItem value="me" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-blue-500" />
+                  My Tasks
+                </span>
+              </SelectItem>
+              <SelectItem value="unassigned" className="text-gray-900 hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  Unassigned
+                </span>
+              </SelectItem>
               {uniqueAssignees.map((assignee) => (
-                <SelectItem key={assignee.id} value={assignee.id}>
-                  {assignee.full_name || assignee.email}
+                <SelectItem key={assignee.id} value={assignee.id} className="text-gray-900 hover:bg-gray-50">
+                  <span className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-xs font-medium text-blue-600">
+                        {(assignee.full_name || assignee.email).charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    {assignee.full_name || assignee.email}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
